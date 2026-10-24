@@ -39,7 +39,7 @@ final class MetricsStore: ObservableObject {
         startTimer()
         refresh()
         observer = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.startTimer() }
+            Task { @MainActor [weak self] in self?.startTimer() }
         }
     }
     private func averageTemperature(group: String) -> Double? {
@@ -50,7 +50,7 @@ final class MetricsStore: ObservableObject {
         if let timer, abs(timer.timeInterval - interval) < 0.01 { return }
         timer?.invalidate()
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor [weak self] in self?.refresh() }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
@@ -73,7 +73,7 @@ final class MetricsStore: ObservableObject {
             let memory = collector.memory()
             let sensors = collector.sensors()
             let processes = Result { try collector.processes() }
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.busy = false
                 guard !self.isPaused else { return }

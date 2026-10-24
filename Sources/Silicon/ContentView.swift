@@ -15,7 +15,6 @@ struct ContentView: View {
     @ObservedObject var store: MetricsStore
     @ViewState private var destination: Destination = .overview
     @ViewState private var range = 60.0
-    @Environment(\.openSettings) private var openSettings
     var body: some View {
         HStack(spacing: 0) {
             sidebar.frame(width: 206)
@@ -92,7 +91,7 @@ struct ContentView: View {
                 }
                 HStack { Image(systemName: "checkmark.shield"); Text("On-device. Always.") }.font(.system(size: 9)).foregroundStyle(Palette.muted)
             }.padding(16).background(Palette.background.opacity(0.55), in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(Palette.border)).padding(16)
-            Button { openSettings() } label: { HStack(spacing: 10) { Image(systemName: "gearshape"); Text("Preferences"); Spacer(); Text("⌘,").foregroundStyle(Palette.muted) }.font(.system(size: 11)).foregroundStyle(Palette.secondary).padding(.horizontal, 26).padding(.vertical, 14) }.buttonStyle(.plain)
+            SettingsLink { HStack(spacing: 10) { Image(systemName: "gearshape"); Text("Preferences"); Spacer(); Text("⌘,").foregroundStyle(Palette.muted) }.font(.system(size: 11)).foregroundStyle(Palette.secondary).padding(.horizontal, 26).padding(.vertical, 14) }.buttonStyle(.plain)
             Rectangle().fill(Palette.border).frame(height: 1).padding(.top, 8)
             HStack(spacing: 7) { Circle().fill(store.isPaused ? Palette.peach : Palette.mint).frame(width: 5, height: 5); Text(store.isPaused ? "Monitoring paused" : "Monitoring your Mac").font(.system(size: 9)).foregroundStyle(Palette.secondary) }.padding(.horizontal, 24).frame(height: 42)
         }.background(Palette.sidebar)
