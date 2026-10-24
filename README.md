@@ -7,7 +7,7 @@
 A native macOS monitor for CPU, memory, processes, temperatures, and fans.
 Built with SwiftUI, graphite surfaces, and soft mint accents.
 
-[![Build](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml/badge.svg)](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml)
+[![Build](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-242b27)
 ![Swift](https://img.shields.io/badge/Swift-5.9%2B-F05138)
 
