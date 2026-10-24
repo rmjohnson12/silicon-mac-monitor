@@ -1,0 +1,73 @@
+import Foundation
+
+struct ProcessSample: Identifiable, Sendable {
+    let id: Int32
+    let name: String
+    let path: String
+    let cpu: Double
+    let memory: UInt64
+}
+
+struct SensorSample: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let group: String
+    let value: Double
+}
+
+struct CPUSample: Sendable {
+    var user: Double = 0
+    var system: Double = 0
+    var cores: [Double] = []
+    var total: Double { user + system }
+}
+
+struct MemorySample: Sendable {
+    var total: UInt64 = ProcessInfo.processInfo.physicalMemory
+    var app: UInt64 = 0
+    var wired: UInt64 = 0
+    var compressed: UInt64 = 0
+    var cached: UInt64 = 0
+    var swap: UInt64 = 0
+    var pressure: Int = 0
+    var used: UInt64 { min(total, app + wired + compressed) }
+    var available: UInt64 { total - used }
+    var percent: Double { total > 0 ? Double(used) / Double(total) * 100 : 0 }
+    var pressureLabel: String {
+        switch pressure { case 1: return "Normal"; case 2: return "Elevated"; case 4: return "Critical"; default: return "Unavailable" }
+    }
+}
+
+struct MachineInfo: Sendable {
+    let chip: String
+    let model: String
+    let cores: Int
+    let performanceCores: Int
+    let efficiencyCores: Int
+    let memory: UInt64
+    let os: String
+}
+
+struct MetricPoint: Identifiable, Sendable {
+    let id = UUID()
+    let date: Date
+    let cpu: Double
+    let memory: Double
+    let temperature: Double?
+}
+
+enum Format {
+    static func gb(_ bytes: UInt64) -> String { String(format: "%.1f", Double(bytes) / 1_073_741_824) }
+    static func memory(_ bytes: UInt64) -> String {
+        bytes >= 1_073_741_824 ? "\(gb(bytes)) GB" : String(format: "%.0f MB", Double(bytes) / 1_048_576)
+    }
+    static func percent(_ value: Double) -> String { String(format: "%.1f", value) }
+    static func uptime(_ seconds: TimeInterval) -> String {
+        let days = Int(seconds) / 86400, hours = Int(seconds) / 3600 % 24, minutes = Int(seconds) / 60 % 60
+        return days > 0 ? "\(days)d \(hours)h" : "\(hours)h \(minutes)m"
+    }
+    static func temperature(_ celsius: Double?, fahrenheit: Bool = false) -> String {
+        guard let celsius else { return "—" }
+        return String(format: "%.0f°%@", fahrenheit ? celsius * 1.8 + 32 : celsius, fahrenheit ? "F" : "C")
+    }
+}

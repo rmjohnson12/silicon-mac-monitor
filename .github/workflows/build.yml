@@ -1,0 +1,24 @@
+name: Build and regression checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Build release executable
+        run: swift build -c release --build-system native
+      - name: Run regression checks
+        run: .build/release/Silicon --self-test
+      - name: Package the app
+        run: ./scripts/build-app.sh

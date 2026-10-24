@@ -1,0 +1,10 @@
+.build/
+dist/
+.DS_Store
+*.xcuserstate
+
+# Local screenshots can contain process names and PIDs.
+screenshots/
+
+# Draft posts and other local sharing materials.
+sharing/
