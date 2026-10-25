@@ -85,7 +85,7 @@ struct ContentView: View {
                     Image(systemName: "laptopcomputer").font(.system(size: 48, weight: .ultraLight)).foregroundStyle(Palette.secondary)
                 }.frame(maxWidth: .infinity).frame(height: 66)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("MacBook Pro").font(.system(size: 12, weight: .semibold))
+                    Text(store.machine.displayName).font(.system(size: 12, weight: .semibold))
                     Text(store.machine.chip).font(.system(size: 10)).foregroundStyle(Palette.secondary)
                     Text("\(Format.memory(store.machine.memory)) unified memory").font(.system(size: 10)).foregroundStyle(Palette.muted)
                 }

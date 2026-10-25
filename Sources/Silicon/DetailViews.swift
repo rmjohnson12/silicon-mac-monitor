@@ -115,7 +115,7 @@ struct ThermalDetailView: View {
                     StatLine(label: "GPU average", value: Format.temperature(store.gpuTemperature, fahrenheit: fahrenheit), color: Palette.peach)
                     Divider().overlay(Palette.border)
                     ForEach(store.fans) { fan in HStack { Image(systemName: "fan").foregroundStyle(Palette.muted); StatLine(label: fan.name, value: "\(Int(fan.value)) RPM") } }
-                    if store.fans.isEmpty { Text("Fan readings unavailable").font(.system(size: 11)).foregroundStyle(Palette.muted) }
+                    if store.fans.isEmpty { Text(store.machine.fanUnavailableMessage).font(.system(size: 11)).foregroundStyle(Palette.muted) }
                 }.frame(maxWidth: .infinity, alignment: .leading).frame(height: 210)
             }.frame(width: 285)
         }
@@ -138,7 +138,7 @@ struct ThermalDetailView: View {
                         HStack { VStack(alignment: .leading, spacing: 5) { Text(sensor.name).font(.system(size: 10)); Text("\(sensor.group) · \(sensor.id)").font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.muted) }; Spacer(); Text(Format.temperature(sensor.value, fahrenheit: fahrenheit)).font(.system(size: 13, weight: .medium, design: .monospaced)).foregroundStyle(Palette.peach) }.padding(13).background(Palette.background.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
                     }
                 }
-                Text("Sensor names follow community M2/M3 mappings and may vary by hardware. Averages include only sensors that respond. Cooling remains managed by macOS.").font(.system(size: 10)).foregroundStyle(Palette.muted).lineSpacing(3)
+                Text("Sensor names follow community M1/M2/M3 mappings and may vary by hardware. Averages include only sensors that respond. Cooling remains managed by macOS.").font(.system(size: 10)).foregroundStyle(Palette.muted).lineSpacing(3)
             }
         }
     }

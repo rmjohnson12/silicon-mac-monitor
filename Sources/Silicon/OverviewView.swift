@@ -97,7 +97,7 @@ struct OverviewView: View {
                 Spacer(minLength: 0)
                 HStack {
                     Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(Palette.muted)
-                    Text(store.fans.isEmpty ? "Fans unavailable" : store.fans.map { "\(Int($0.value))" }.joined(separator: " / ") + " RPM").font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.secondary)
+                    Text(store.fans.isEmpty ? store.machine.fanUnavailableMessage : store.fans.map { "\(Int($0.value))" }.joined(separator: " / ") + " RPM").font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.secondary)
                     Spacer()
                     Button { destination = .thermals } label: { Image(systemName: "arrow.up.right").font(.system(size: 11)).foregroundStyle(Palette.muted) }.buttonStyle(.plain).help("View thermal sensors")
                 }.padding(.top, 10).overlay(alignment: .top) { Rectangle().fill(Palette.border).frame(height: 1) }

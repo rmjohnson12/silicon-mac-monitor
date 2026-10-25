@@ -19,6 +19,10 @@ enum SensorCatalog {
             }
         }
         switch generation {
+        case "M1":
+            append(["Tp09", "Tp0T"], name: "Efficiency sensor", group: "CPU")
+            append(["Tp01", "Tp05", "Tp0D", "Tp0H", "Tp0L", "Tp0P", "Tp0X", "Tp0b"], name: "Performance sensor", group: "CPU")
+            append(["Tg05", "Tg0D", "Tg0L", "Tg0T"], name: "GPU sensor", group: "GPU")
         case "M2":
             append(["Tp1h", "Tp1t", "Tp1p", "Tp1l"], name: "Efficiency sensor", group: "CPU")
             append(["Tp01", "Tp05", "Tp09", "Tp0D", "Tp0X", "Tp0b", "Tp0f", "Tp0j"], name: "Performance sensor", group: "CPU")

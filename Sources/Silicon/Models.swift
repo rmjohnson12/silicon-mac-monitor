@@ -46,6 +46,22 @@ struct MachineInfo: Sendable {
     let efficiencyCores: Int
     let memory: UInt64
     let os: String
+
+    var displayName: String {
+        // Older identifiers include the product family; newer opaque ones
+        // use only the models identified in our hardware reports so far.
+        if model == "Mac15,11" || model == "Mac14,7" { return "MacBook Pro" }
+        for (prefix, name) in [("MacBookAir", "MacBook Air"), ("MacBookPro", "MacBook Pro"),
+                               ("MacBook", "MacBook"), ("Macmini", "Mac mini"),
+                               ("MacStudio", "Mac Studio"), ("MacPro", "Mac Pro"), ("iMac", "iMac")] {
+            if model.hasPrefix(prefix) { return name }
+        }
+        return "Mac"
+    }
+
+    // Confirmed fanless model. Missing RPM alone does not prove a Mac has no fan.
+    var isKnownFanless: Bool { model == "MacBookAir10,1" }
+    var fanUnavailableMessage: String { isKnownFanless ? "Fanless Mac · no fan installed" : "Fan readings unavailable" }
 }
 
 struct MetricPoint: Identifiable, Sendable {

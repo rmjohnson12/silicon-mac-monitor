@@ -46,6 +46,26 @@ enum SelfChecks {
             func samples(_ chip: String, _ readings: [String: Double]) -> [SensorSample] {
                 SensorCatalog.samples(definitions: SensorCatalog.temperatureDefinitions(chip: chip)) { readings[$0] }
             }
+            let m1Fixture = ["Tp09": 39.5, "Tp0T": 40.0, "Tp01": 48.25, "Tp0b": 49.0,
+                             "Tg05": 43.0, "Tg0D": 44.0, "Tg0L": 45.0, "Tg0T": 46.0,
+                             "Tp1h": 99.0, "Tg0f": 99.0, "TB0T": 28.1, "TB1T": 28.1]
+            let m1 = samples("Apple M1", m1Fixture)
+            try expect(Dictionary(uniqueKeysWithValues: m1.filter { $0.group == "CPU" }.map { ($0.id, $0.value) }) ==
+                       ["Tp09": 39.5, "Tp0T": 40, "Tp01": 48.25, "Tp0b": 49], "Read M1 CPU sensors including case-sensitive suffixes")
+            try expect(Set(m1.filter { $0.group == "GPU" }.map(\.id)) == ["Tg05", "Tg0D", "Tg0L", "Tg0T"], "Read M1 GPU sensors without using M2-only keys")
+            try expect(["Apple M1 Pro", "Apple M1 Max", "Apple M1 Ultra"].allSatisfy { chip in
+                let result = samples(chip, m1Fixture)
+                return result.contains { $0.group == "CPU" } && result.contains { $0.group == "GPU" }
+            }, "Select M1-family mappings for chip-name variants")
+            try expect(Set(samples("Apple M1", ["TB0T": 28.1, "TB1T": 28.1]).map(\.group)) == ["Battery"], "Keep an M1 battery-only response out of CPU/GPU averages")
+            try expect(!samples("Apple M10", m1Fixture).contains { $0.group == "CPU" || $0.group == "GPU" }, "Do not confuse M10 with M1")
+            func machineForModel(_ model: String) -> MachineInfo {
+                MachineInfo(chip: "Apple M1", model: model, cores: 8, performanceCores: 4, efficiencyCores: 4, memory: 8_589_934_592, os: "Test OS")
+            }
+            let air = machineForModel("MacBookAir10,1"), pro = machineForModel("MacBookPro17,1")
+            try expect(air.displayName == "MacBook Air" && pro.displayName == "MacBook Pro", "Identify M1 Air and Pro by model rather than their shared chip name")
+            try expect(air.isKnownFanless && !pro.isKnownFanless && !machineForModel("Unknown").isKnownFanless, "Only label the confirmed M1 Air model as fanless")
+            try expect(machineForModel("Mac15,11").displayName == "MacBook Pro" && machineForModel("Unknown").displayName == "Mac", "Retain the tested M3 model label and avoid guessing unknown product families")
             let m2Fixture = ["Tp1h": 41.25, "Tp1l": 43.5, "Tp01": 52.5, "Tp0b": 51.0, "Tg0f": 44.75, "TB0T": 28.0, "F0Ac": 0.0]
             let m2 = samples("Apple M2", m2Fixture)
             let cpuReadings = Dictionary(uniqueKeysWithValues: m2.filter { $0.group == "CPU" }.map { ($0.id, $0.value) })

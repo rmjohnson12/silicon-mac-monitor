@@ -14,4 +14,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Sensor identification
 
-M2 and M3 sensor key identifiers were checked against the community hardware mappings in [exelban/Stats](https://github.com/exelban/stats/blob/master/Modules/Sensors/values.swift). These identifiers are hardware protocol facts; no Stats source code is included. Labels are community mappings, not a guarantee from Apple.
+M1, M2, and M3 sensor key identifiers were checked against the community hardware mappings in [exelban/Stats](https://github.com/exelban/stats/blob/master/Modules/Sensors/values.swift). These identifiers are hardware protocol facts; no Stats source code is included. Labels are community mappings, not a guarantee from Apple.
+
+The MacBook Air (M1, 2020), model `MacBookAir10,1`, is identified as fanless based on [Apple's launch documentation](https://www.apple.com/newsroom/2020/11/introducing-the-next-generation-of-mac/). Missing fan readings on other models do not establish that a machine is fanless.
