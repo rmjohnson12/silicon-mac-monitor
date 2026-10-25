@@ -1,4 +1,5 @@
 import Foundation
+import SensorBridge
 
 // A dependency-free regression runner, since Command Line Tools do not include
 // XCTest. These exercise parsing and missing-data cases without opening the UI.
@@ -93,6 +94,42 @@ enum SelfChecks {
             sensorAwake = true
             let afterWake = SensorCatalog.samples(definitions: definitions, read: read)
             try expect(beforeWake.isEmpty && afterWake.first?.id == "Tp01" && afterWake.first?.value == 44, "Recover a sensor that was unavailable during the first sample")
+            let hidRows = [HIDTemperatureReading(name: "pACC MTR Temp Sensor0", value: 48),
+                           HIDTemperatureReading(name: "eACC MTR Temp Sensor1", value: 42),
+                           HIDTemperatureReading(name: "GPU MTR Temp Sensor0", value: 45),
+                           HIDTemperatureReading(name: "SOC MTR Temp Sensor0", value: 80),
+                           HIDTemperatureReading(name: "Battery", value: 28)]
+            let hid = SensorCatalog.hidSamples(hidRows)
+            try expect(hid.filter { $0.group == "CPU" }.map(\.value) == [48, 42], "Classify HID performance and efficiency thermal services as CPU")
+            try expect(hid.filter { $0.group == "GPU" }.map(\.value) == [45], "Classify only GPU thermal services as GPU")
+            try expect(hid.count == 3 && hid.allSatisfy { $0.source == "HID" }, "Keep SOC and battery readings out of HID CPU/GPU averages")
+            try expect(SensorCatalog.hidSamples(hidRows + hidRows).count == 3, "Avoid double-counting duplicate HID product labels")
+            let invalidHID = [HIDTemperatureReading(name: "pACC MTR Temp Sensor0", value: .nan),
+                              HIDTemperatureReading(name: "eACC MTR Temp Sensor1", value: 0),
+                              HIDTemperatureReading(name: "GPU MTR Temp Sensor0", value: 130),
+                              HIDTemperatureReading(name: "GPU MTR Temp Sensor1", value: .infinity)]
+            try expect(SensorCatalog.hidSamples(invalidHID).isEmpty, "Reject missing, zero, nonfinite and out-of-range HID temperatures")
+            try expect(SensorCatalog.hidSamples([HIDTemperatureReading(name: "pACC MTR Temp Sensor", value: 40),
+                                               HIDTemperatureReading(name: "GPU MTR Temp Sensor1 extra", value: 45)]).isEmpty, "Do not classify malformed or partial HID labels")
+            let recovered = SensorCatalog.withHIDFallback(smc: batteryOnly, hid: hid)
+            try expect(recovered.filter { $0.group == "CPU" }.count == 2 && recovered.filter { $0.group == "GPU" }.count == 1, "Fill both missing temperature groups through HID")
+            try expect(recovered.contains { $0.id == "F0Ac" && $0.value == 0 }, "Preserve real zero RPM alongside HID fallback")
+            let smcCPU = samples("Apple M1", ["Tp01": 50, "TB0T": 28])
+            let partial = SensorCatalog.withHIDFallback(smc: smcCPU, hid: hid)
+            try expect(partial.filter { $0.group == "CPU" }.map(\.id) == ["Tp01"] && partial.contains { $0.group == "GPU" && $0.source == "HID" }, "Fallback independently per group without mixing duplicate sensor interfaces")
+            try expect(SensorCatalog.withHIDFallback(smc: m2, hid: hid).map(\.id) == m2.map(\.id), "Keep responding SMC CPU/GPU groups unchanged")
+            try expect(!SensorCatalog.withHIDFallback(smc: batteryOnly, hid: []).contains { $0.group == "CPU" || $0.group == "GPU" }, "Leave temperatures unavailable when both interfaces have no valid readings")
+            var diagnostic = SensorDiagnostics()
+            diagnostic.hidStatus = "ok"
+            diagnostic.hidProbes = [HIDProbeInfo(name: "pACC MTR Temp Sensor0", value: nil, status: "event-unavailable")]
+            diagnostic.smcProbes = ["Tp01": SMCProbeInfo(status: "metadata-unavailable", dataType: "", byteCount: 0)]
+            let diagnosticSnapshot = try SnapshotEncoder.encode(date: Date(timeIntervalSince1970: 0), machine: machine, cpu: CPUSample(), memory: memory, thermal: "Nominal", sensors: hid, processes: [], sensorDiagnostics: diagnostic)
+            let diagnosticJSON = try JSONSerialization.jsonObject(with: diagnosticSnapshot) as! [String: Any]
+            try expect((diagnosticJSON["sensorDiagnostics"] as? [String: Any])?["hidStatus"] as? String == "ok", "Include sensor-read diagnostics in exported snapshots")
+            try expect((diagnosticJSON["sensors"] as? [[String: Any]])?.first?["source"] as? String == "HID", "Export which sensor interface supplied a temperature")
+            try expect((decoded["sensors"] as? [[String: Any]])?.first?["source"] as? String == "SMC", "Retain explicit SMC attribution for existing sensors")
+            let unavailableProbe = silicon_smc_probe(0, "Tp01")
+            try expect(unavailableProbe.status == 1, "Report a missing SMC connection without a fabricated temperature")
             print("PASS: \(count) regression checks.")
             return 0
         } catch { fputs("FAIL: \(error)\n", stderr); return 1 }

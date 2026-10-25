@@ -13,6 +13,31 @@ struct SensorSample: Identifiable, Sendable {
     let name: String
     let group: String
     let value: Double
+    var source: String { id.hasPrefix("HID:") ? "HID" : "SMC" }
+}
+
+struct SMCProbeInfo: Codable, Sendable {
+    let status: String
+    let dataType: String
+    let byteCount: Int
+}
+
+struct SensorDiagnostics: Codable, Sendable {
+    var smcConnectionOpen = false
+    var smcProbes: [String: SMCProbeInfo] = [:]
+    var hidStatus = "not-needed"
+    var hidMatchedServices = 0
+    var hidMissingEvents = 0
+    var hidReturnedReadings = 0
+    var hidRecognizedReadings = 0
+    var hidProbes: [HIDProbeInfo] = []
+    var missingTemperatureGroups: [String] = []
+}
+
+struct HIDProbeInfo: Codable, Sendable {
+    let name: String
+    let value: Double?
+    let status: String
 }
 
 struct CPUSample: Sendable {

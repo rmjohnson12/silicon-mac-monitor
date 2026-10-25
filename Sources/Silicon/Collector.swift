@@ -6,6 +6,8 @@ import SensorBridge
 final class Collector: @unchecked Sendable {
     private var previousCPU: [[UInt32]] = []
     private let connection = silicon_smc_open()
+    private let hidReader = HIDTemperatureReader()
+    private(set) var sensorDiagnostics = SensorDiagnostics()
     private let temperatureDefinitions = SensorCatalog.temperatureDefinitions(chip: Collector.sysString("machdep.cpu.brand_string"))
     deinit { silicon_smc_close(connection) }
     func resetCPU() { previousCPU = [] }
@@ -103,11 +105,38 @@ final class Collector: @unchecked Sendable {
             return ProcessSample(id: pid, name: URL(fileURLWithPath: path).lastPathComponent, path: path, cpu: cpu, memory: rss * 1024)
         }
     }
-    private func read(_ key: String) -> Double? {
-        var value = 0.0
-        return key.withCString { silicon_smc_read(connection, $0, &value) } == 1 ? value : nil
-    }
-    func sensors() -> [SensorSample] {
-        SensorCatalog.samples(definitions: temperatureDefinitions, read: read)
+    func sensors(forceHIDProbe: Bool = false) -> [SensorSample] {
+        var diagnostics = SensorDiagnostics()
+        diagnostics.smcConnectionOpen = connection != 0
+        let labels = ["ok", "connection-unavailable", "invalid-key", "metadata-unavailable", "invalid-size", "read-failed", "unsupported-format", "nonfinite"]
+        let smc = SensorCatalog.samples(definitions: temperatureDefinitions) { key in
+            let probe = key.withCString { silicon_smc_probe(connection, $0) }
+            let bytes = [24, 16, 8, 0].map { UInt8(truncatingIfNeeded: probe.data_type >> $0) }
+            let type = probe.data_type == 0 ? "" : String(bytes: bytes, encoding: .ascii) ?? "unknown"
+            var status = labels.indices.contains(Int(probe.status)) ? labels[Int(probe.status)] : "unknown-error"
+            if probe.status == 0 && (key.hasPrefix("F") ? !(0..<15000).contains(probe.value) : !(probe.value > 0 && probe.value < 130)) {
+                status = "out-of-range"
+            }
+            diagnostics.smcProbes[key] = SMCProbeInfo(status: status, dataType: type, byteCount: Int(probe.data_size))
+            return probe.status == 0 ? probe.value : nil
+        }
+        var result = smc
+        if forceHIDProbe || !smc.contains(where: { $0.group == "CPU" }) || !smc.contains(where: { $0.group == "GPU" }) {
+            let hid = hidReader.read()
+            let recognized = SensorCatalog.hidSamples(hid.readings)
+            diagnostics.hidStatus = hid.status
+            diagnostics.hidMatchedServices = hid.matchedServices
+            diagnostics.hidMissingEvents = hid.missingEvents
+            diagnostics.hidReturnedReadings = hid.readings.filter { $0.value.isFinite }.count
+            diagnostics.hidRecognizedReadings = recognized.count
+            diagnostics.hidProbes = hid.readings.map {
+                HIDProbeInfo(name: $0.name, value: $0.value.isFinite ? $0.value : nil,
+                             status: !$0.value.isFinite ? "event-unavailable" : ($0.value > 0 && $0.value < 130 ? "ok" : "out-of-range"))
+            }.sorted { $0.name < $1.name }
+            result = SensorCatalog.withHIDFallback(smc: smc, hid: recognized)
+        }
+        diagnostics.missingTemperatureGroups = ["CPU", "GPU"].filter { group in !result.contains { $0.group == group } }
+        sensorDiagnostics = diagnostics
+        return result
     }
 }

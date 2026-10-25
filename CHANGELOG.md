@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 — 2026-10-25
+
+- Add a read-only HID thermal reader for recognized CPU/GPU services when the corresponding SMC temperature group is unavailable. The M1 Air report confirmed that the 1.0.2 SMC mapping alone did not restore its temperatures.
+- Keep responding SMC groups unchanged; exclude battery/SOC/unknown HID labels and invalid readings from CPU/GPU averages. Reuse the HID client and re-discover services so later samples can recover after wake.
+- Include sensor source and diagnostic details in snapshots: SMC key/read-format status, HID thermal product labels/values, missing events, and missing temperature groups. Add a process-free `--sensor-diagnostics` command.
+- Expand deterministic regressions to 55 checks, including fallback behavior, duplicate filtering, missing events, source attribution and diagnostic serialization.
+
+Live M3 Max SMC CPU/GPU readings passed regression diagnostics. The HID reader returned thermal services on that Mac, but none had recognized CPU/GPU labels; its existing SMC readings were preserved. Physical M1 CPU/GPU confirmation remains pending a 1.0.3 retest. Both hardware interfaces are undocumented/private and do not establish Mac App Store eligibility.
+
 ## 1.0.2 — 2026-10-25
 
 - Add M1-family CPU/GPU sensor identifiers. Version 1.0.1 still fell back to legacy CPU probes on M1, so battery readings could appear while CPU/GPU temperatures were missing.

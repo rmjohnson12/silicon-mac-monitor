@@ -9,6 +9,14 @@ struct SiliconApp: App {
 
     init() {
         if CommandLine.arguments.contains("--self-test") { exit(SelfChecks.run()) }
+        if CommandLine.arguments.contains("--sensor-diagnostics") {
+            let collector = Collector()
+            _ = collector.sensors(forceHIDProbe: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            if let data = try? encoder.encode(collector.sensorDiagnostics), let text = String(data: data, encoding: .utf8) { print(text) }
+            exit(0)
+        }
         if CommandLine.arguments.contains("--diagnostics") {
             Self.diagnostics()
             exit(0)

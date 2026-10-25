@@ -9,6 +9,32 @@ struct TemperatureSensorDefinition: Sendable {
 // Hardware identifiers checked against the community mappings cited in
 // THIRD_PARTY_NOTICES.md. Sensor numbering does not imply one sensor per core.
 enum SensorCatalog {
+    static func hidSamples(_ readings: [HIDTemperatureReading]) -> [SensorSample] {
+        var seen: Set<String> = []
+        return readings.compactMap { reading in
+            guard reading.value.isFinite, reading.value > 0, reading.value < 130 else { return nil }
+            // Only known CPU/GPU product labels qualify. In particular, SOC,
+            // battery and enclosure temperatures must not become CPU averages.
+            for (prefix, label, group) in [("pACC MTR Temp Sensor", "Performance sensor", "CPU"),
+                                            ("eACC MTR Temp Sensor", "Efficiency sensor", "CPU"),
+                                            ("GPU MTR Temp Sensor", "GPU sensor", "GPU")] {
+                guard reading.name.hasPrefix(prefix) else { continue }
+                let suffix = String(reading.name.dropFirst(prefix.count))
+                guard !suffix.isEmpty, suffix.allSatisfy({ $0.isASCII && $0.isNumber }),
+                      let index = Int(suffix), (0..<256).contains(index), seen.insert(reading.name).inserted else { return nil }
+                return SensorSample(id: "HID:\(reading.name)", name: "\(label) \(index + 1)", group: group, value: reading.value)
+            }
+            return nil
+        }
+    }
+
+    static func withHIDFallback(smc: [SensorSample], hid: [SensorSample]) -> [SensorSample] {
+        let missing = Set(["CPU", "GPU"]).subtracting(smc.map(\.group))
+        // Prefer a responding SMC group as a whole: combining both interfaces
+        // could count the same physical sensors twice in the displayed average.
+        return smc + hid.filter { missing.contains($0.group) && $0.source == "HID" }
+    }
+
     static func temperatureDefinitions(chip: String) -> [TemperatureSensorDefinition] {
         let words = chip.split(whereSeparator: { $0.isWhitespace })
         let generation = words.first == "Apple" && words.count > 1 ? String(words[1]) : ""

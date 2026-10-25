@@ -39,23 +39,36 @@ uint32_t silicon_smc_open(void) {
 }
 void silicon_smc_close(uint32_t connection) { if (connection) IOServiceClose(connection); }
 int silicon_smc_read(uint32_t connection, const char *key, double *value) {
-    if (!connection || !key || strlen(key) != 4 || !value) return 0;
+    if (!value) return 0;
+    SiliconSMCReading reading = silicon_smc_probe(connection, key);
+    if (reading.status != 0) return 0;
+    *value = reading.value;
+    return 1;
+}
+SiliconSMCReading silicon_smc_probe(uint32_t connection, const char *key) {
+    SiliconSMCReading reading = {0};
+    if (!connection) { reading.status = 1; return reading; }
+    if (!key || strlen(key) != 4) { reading.status = 2; return reading; }
     SMCMessage request = {0}, info = {0}, output = {0};
     request.key = fourcc(key);
     request.command = 9; // Read key metadata
-    if (!exchange(connection, &request, &info) || info.info.size == 0 || info.info.size > 32) return 0;
+    if (!exchange(connection, &request, &info)) { reading.status = 3; return reading; }
+    reading.data_type = info.info.type;
+    reading.data_size = info.info.size;
+    if (info.info.size == 0 || info.info.size > 32) { reading.status = 4; return reading; }
     request.info.size = info.info.size;
     request.command = 5; // Read key bytes
-    if (!exchange(connection, &request, &output)) return 0;
+    if (!exchange(connection, &request, &output)) { reading.status = 5; return reading; }
     uint8_t *b = output.bytes;
     if (info.info.type == fourcc("flt ") && info.info.size == 4) {
-        float f; memcpy(&f, b, 4); *value = f;
+        float f; memcpy(&f, b, 4); reading.value = f;
     } else if (info.info.type == fourcc("sp78") && info.info.size == 2) {
-        *value = (double)(int16_t)((b[0] << 8) | b[1]) / 256.0;
+        reading.value = (double)(int16_t)((b[0] << 8) | b[1]) / 256.0;
     } else if (info.info.type == fourcc("fpe2") && info.info.size == 2) {
-        *value = (double)((b[0] << 8) | b[1]) / 4.0;
+        reading.value = (double)((b[0] << 8) | b[1]) / 4.0;
     } else if (info.info.type == fourcc("ui8 ") && info.info.size == 1) {
-        *value = b[0];
-    } else { return 0; }
-    return isfinite(*value);
+        reading.value = b[0];
+    } else { reading.status = 6; return reading; }
+    if (!isfinite(reading.value)) reading.status = 7;
+    return reading;
 }

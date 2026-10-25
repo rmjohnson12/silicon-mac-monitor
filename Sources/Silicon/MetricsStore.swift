@@ -7,6 +7,7 @@ final class MetricsStore: ObservableObject {
     @Published var memory = MemorySample()
     @Published var processes: [ProcessSample] = []
     @Published var sensors: [SensorSample] = []
+    private var sensorDiagnostics: SensorDiagnostics?
     @Published var history: [MetricPoint] = []
     @Published var thermal = ProcessInfo.processInfo.thermalState
     @Published var isPaused = false
@@ -72,6 +73,7 @@ final class MetricsStore: ObservableObject {
             let cpu = collector.cpu()
             let memory = collector.memory()
             let sensors = collector.sensors()
+            let sensorDiagnostics = collector.sensorDiagnostics
             let processes = Result { try collector.processes() }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
@@ -81,6 +83,7 @@ final class MetricsStore: ObservableObject {
                 if let cpu { self.cpu = cpu }
                 if let memory { self.memory = memory } else { errors.append("Memory readings are unavailable.") }
                 self.sensors = sensors
+                self.sensorDiagnostics = sensorDiagnostics
                 switch processes {
                 case .success(let list): self.processes = list; self.processUpdatedAt = Date()
                 case .failure: errors.append("Process readings are unavailable. The previous list may be out of date.")
@@ -108,7 +111,7 @@ final class MetricsStore: ObservableObject {
         panel.nameFieldStringValue = "Silicon-\(Date().formatted(.iso8601.year().month().day())) .json".replacingOccurrences(of: " .", with: ".")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            try SnapshotEncoder.encode(date: lastUpdate ?? Date(), machine: machine, cpu: cpu, memory: memory, thermal: thermalLabel, sensors: sensors, processes: processes).write(to: url, options: .atomic)
+            try SnapshotEncoder.encode(date: lastUpdate ?? Date(), machine: machine, cpu: cpu, memory: memory, thermal: thermalLabel, sensors: sensors, processes: processes, sensorDiagnostics: sensorDiagnostics).write(to: url, options: .atomic)
         }
         catch { let alert = NSAlert(error: error); alert.runModal() }
     }
