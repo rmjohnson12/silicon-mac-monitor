@@ -41,7 +41,7 @@ cd silicon-mac-monitor
 open dist/Silicon.app
 ```
 
-The build script creates a native app bundle with its icon and an ad-hoc signature for local use. This repository distributes source; the app is **not notarized for public binary distribution**. The binary is built for the current Mac's architecture.
+The build script creates a native app bundle with its icon and an ad-hoc signature for local use, plus a versioned ZIP in `dist/` for transferring a test build. This repository distributes source; the app is **not notarized for public binary distribution**. The binary is built for the current Mac's architecture.
 
 To install it, quit Silicon and copy `dist/Silicon.app` into your `~/Applications` folder. You can also use `Launch Silicon.command`, which opens an installed copy or builds and opens the project copy if needed.
 
@@ -49,7 +49,9 @@ To install it, quit Silicon and copy `dist/Silicon.app` into your `~/Application
 
 Live hardware validation was performed on a **14-core Apple M3 Max MacBook Pro with 36 GB of unified memory, running macOS 26.7.2**.
 
-The CPU and memory collectors use macOS APIs and discover the machine's core count and physical memory at runtime. Temperature mappings are primarily implemented for the M3 family, with limited legacy CPU sensor probes. Sensor labels use community mappings and are not guaranteed across models or macOS releases. Other Macs have not been validated.
+The CPU and memory collectors use macOS APIs and discover the machine's core count and physical memory at runtime. Temperature mappings are implemented for the M2 and M3 families, with limited legacy CPU sensor probes. Sensor labels use community mappings and are not guaranteed across models or macOS releases.
+
+A user-reported test on a 2022 13-inch M2 MacBook Pro confirmed CPU/memory/process monitoring plus battery temperature and fan readings. That test identified the missing M2 CPU/GPU mapping in version 1.0. Version **1.0.1** adds those keys and re-probes unavailable sensors each interval. M2 temperature mapping and recovery have synthetic-response regression coverage; physical M2 CPU/GPU temperature confirmation is still pending a retest with 1.0.1. Other hardware has not been validated.
 
 Unavailable sensors display **—** or an explicit unavailable message. A successful **0 RPM** reading is retained: some Apple silicon Macs stop their fans when cooling demand is low. Silicon reads fan speeds; macOS manages cooling.
 
@@ -65,7 +67,7 @@ Unavailable sensors display **—** or an explicit unavailable message. A succes
 
 - Collection and charts run locally. The app has no account, analytics, or network requests.
 - History stays in memory and is discarded when the app quits.
-- JSON snapshots are written only when you choose to export them. They include process names, PIDs, resource usage, and sensor readings, and omit executable paths, command-line arguments, and the Mac's serial number.
+- JSON snapshots are written only when you choose to export them. They include app version, chip/model, OS version, core count, process names, PIDs, resource usage, and sensor readings, and omit executable paths, command-line arguments, and the Mac's serial number.
 - Build output, local screenshots, exported verification data, and sharing drafts are excluded from version control. The public preview uses sample values.
 
 ## Verify
@@ -76,7 +78,7 @@ swift build -c release --build-system native
 .build/release/Silicon --diagnostics
 ```
 
-`--self-test` runs **18 regression checks** covering process parsing, multicore CPU values, memory bounds, missing readings, temperature conversion, and JSON exports. The runner does not require XCTest.
+`--self-test` runs **32 regression checks** covering process parsing, multicore CPU values, memory bounds, missing readings, temperature conversion, JSON exports, M2/M3 sensor selection, zero-RPM handling, and sensor recovery. Sensor-selection checks use synthetic SMC responses and do not calibrate or validate physical sensors. The runner does not require XCTest.
 
 `--diagnostics` samples real hardware and exits nonzero if CPU, memory, or process validation fails. It reports the sensors that respond, without requiring sudo or opening a window. Hardware diagnostics are a local check; CI builds the app and runs the deterministic regression checks.
 

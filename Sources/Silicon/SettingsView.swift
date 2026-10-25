@@ -14,7 +14,7 @@ struct SettingsView: View {
                 Picker("Temperature readouts", selection: $fahrenheit) { Text("Celsius (°C)").tag(false); Text("Fahrenheit (°F)").tag(true) }
             }.formStyle(.grouped).scrollDisabled(true).frame(height: 170)
             HStack(alignment: .top, spacing: 10) { Image(systemName: "lock.shield").foregroundStyle(Palette.mint); Text("Your readings stay on this Mac. No account, analytics, or network connection. History covers the last 15 minutes of this session; snapshots are saved only when you export them.").font(.system(size: 11)).foregroundStyle(Palette.secondary).lineSpacing(4) }
-            Text("SILICON 1.0  ·  \(store.machine.os)").font(.system(size: 9, design: .monospaced)).tracking(1).foregroundStyle(Palette.muted)
+            Text("SILICON \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")  ·  \(store.machine.os)").font(.system(size: 9, design: .monospaced)).tracking(1).foregroundStyle(Palette.muted)
         }.padding(30).frame(width: 480).background(Palette.background).foregroundStyle(Palette.text).tint(Palette.mint)
     }
 }

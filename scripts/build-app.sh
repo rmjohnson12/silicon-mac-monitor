@@ -27,8 +27,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>Silicon</string>
 <key>CFBundleIdentifier</key><string>local.ronniejohnson.Silicon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>1.0.1</string>
+<key>CFBundleVersion</key><string>2</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
@@ -40,4 +40,10 @@ codesign --force --sign - "$APP_DIR"
 codesign --verify --strict "$APP_DIR"
 mkdir -p "$PROJECT_DIR/dist"
 ditto --norsrc --noextattr "$APP_DIR" "$PROJECT_DIR/dist/Silicon.app"
+APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_DIR/Contents/Info.plist")"
+APP_ARCH="$(uname -m)"
+ARCHIVE_PATH="$PROJECT_DIR/dist/Silicon-$APP_VERSION-$APP_ARCH.zip"
+# Archive the verified temporary bundle, without file-provider/Finder metadata.
+ditto -c -k --norsrc --noextattr --keepParent "$APP_DIR" "$ARCHIVE_PATH"
 print "Built: $PROJECT_DIR/dist/Silicon.app"
+print "Packaged: $ARCHIVE_PATH"

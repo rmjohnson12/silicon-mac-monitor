@@ -14,4 +14,4 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Sensor identification
 
-M3 sensor key identifiers were checked against the community hardware mappings in [exelban/Stats](https://github.com/exelban/stats/blob/master/Modules/Sensors/values.swift). These identifiers are hardware protocol facts; no Stats source code is included. Labels are community mappings, not a guarantee from Apple.
+M2 and M3 sensor key identifiers were checked against the community hardware mappings in [exelban/Stats](https://github.com/exelban/stats/blob/master/Modules/Sensors/values.swift). These identifiers are hardware protocol facts; no Stats source code is included. Labels are community mappings, not a guarantee from Apple.

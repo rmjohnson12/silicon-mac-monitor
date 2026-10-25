@@ -6,6 +6,8 @@ enum SnapshotEncoder {
         let rows: [[String: Any]] = processes.map { ["pid": $0.id, "name": $0.name, "cpuPercent": $0.cpu, "residentBytes": $0.memory] }
         let snapshot: [String: Any] = [
             "capturedAt": date.ISO8601Format(), "chip": machine.chip,
+            "model": machine.model, "os": machine.os, "logicalCoreCount": machine.cores,
+            "appVersion": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development",
             "cpuPercent": cpu.total, "memoryUsedBytes": memory.used, "memoryTotalBytes": memory.total,
             "memoryPressure": memory.pressureLabel, "swapUsedBytes": memory.swap,
             "thermalState": thermal, "sensors": sensorRows, "processes": rows,

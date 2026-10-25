@@ -36,6 +36,43 @@ enum SelfChecks {
             try expect((decoded["processes"] as? [[String: Any]])?.count == 2, "Export every process")
             try expect(!(String(data: snapshot, encoding: .utf8) ?? "").contains("/Applications/"), "Exclude executable paths from exports")
             try expect((decoded["sensors"] as? [[String: Any]])?.first?["unit"] as? String == "RPM", "Export explicit sensor units")
+            try expect(decoded["model"] as? String == "Test model", "Export hardware model without a serial number")
+            try expect(decoded["os"] as? String == "Test OS", "Export OS version for compatibility reports")
+            try expect(decoded["logicalCoreCount"] as? Int == 14, "Export the detected core count")
+            try expect(!(decoded["appVersion"] as? String ?? "").isEmpty, "Identify the app build in exported reports")
+
+            // Synthetic SMC responses test selection and handling, not physical
+            // calibration. Never load a user's exported process data here.
+            func samples(_ chip: String, _ readings: [String: Double]) -> [SensorSample] {
+                SensorCatalog.samples(definitions: SensorCatalog.temperatureDefinitions(chip: chip)) { readings[$0] }
+            }
+            let m2Fixture = ["Tp1h": 41.25, "Tp1l": 43.5, "Tp01": 52.5, "Tp0b": 51.0, "Tg0f": 44.75, "TB0T": 28.0, "F0Ac": 0.0]
+            let m2 = samples("Apple M2", m2Fixture)
+            let cpuReadings = Dictionary(uniqueKeysWithValues: m2.filter { $0.group == "CPU" }.map { ($0.id, $0.value) })
+            try expect(cpuReadings == ["Tp1h": 41.25, "Tp1l": 43.5, "Tp01": 52.5, "Tp0b": 51.0], "Read M2 CPU sensors with case-sensitive hardware keys")
+            try expect(m2.first { $0.group == "GPU" }?.value == 44.75, "Read M2 GPU temperature")
+            try expect(["Apple M2 Pro", "Apple M2 Max", "Apple M2 Ultra"].allSatisfy { chip in
+                let result = samples(chip, m2Fixture)
+                return result.contains { $0.group == "CPU" } && result.contains { $0.group == "GPU" }
+            }, "Select M2-family mappings for supported chip-name variants")
+            let m3 = samples("Apple M3 Max", ["Te05": 41, "Tf04": 50, "Tf14": 45, "Tp01": 99])
+            try expect(Set(m3.map(\.id)) == ["Te05", "Tf04", "Tf14"], "Keep M3 CPU/GPU mapping separate from M2")
+            try expect(!samples("Apple M20", m2Fixture).contains { $0.group == "CPU" || $0.group == "GPU" }, "Do not guess an unsupported generation from a partial chip name")
+            try expect(samples("Intel Core i7", ["TC0P": 37]).first?.value == 37, "Preserve legacy CPU proximity reads")
+            let invalidTemperatures: [String: Double] = ["Tp1h": .nan, "Tp1t": .infinity, "Tp1p": 0, "Tp1l": -1, "Tp01": 130, "Tp05": 42]
+            try expect(samples("Apple M2", invalidTemperatures).map(\.id) == ["Tp05"], "Reject nonfinite and out-of-range temperature readings")
+            let fanReadings: [String: Double] = ["F0Ac": 0, "F1Ac": -1, "F2Ac": .nan, "F3Ac": 15000]
+            let fans = samples("Apple M2", fanReadings)
+            try expect(fans.count == 1 && fans.first?.id == "F0Ac" && fans.first?.value == 0, "Preserve actual zero RPM while rejecting invalid fan readings")
+            let batteryOnly = samples("Apple M2", ["TB0T": 29, "TB1T": 28, "F0Ac": 0])
+            try expect(Set(batteryOnly.map(\.group)) == ["Battery", "Fan"], "Never substitute battery temperatures for unavailable CPU/GPU sensors")
+            let definitions = SensorCatalog.temperatureDefinitions(chip: "Apple M2")
+            var sensorAwake = false
+            let read: (String) -> Double? = { key in sensorAwake && key == "Tp01" ? 44 : nil }
+            let beforeWake = SensorCatalog.samples(definitions: definitions, read: read)
+            sensorAwake = true
+            let afterWake = SensorCatalog.samples(definitions: definitions, read: read)
+            try expect(beforeWake.isEmpty && afterWake.first?.id == "Tp01" && afterWake.first?.value == 44, "Recover a sensor that was unavailable during the first sample")
             print("PASS: \(count) regression checks.")
             return 0
         } catch { fputs("FAIL: \(error)\n", stderr); return 1 }

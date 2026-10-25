@@ -138,7 +138,7 @@ struct ThermalDetailView: View {
                         HStack { VStack(alignment: .leading, spacing: 5) { Text(sensor.name).font(.system(size: 10)); Text("\(sensor.group) · \(sensor.id)").font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.muted) }; Spacer(); Text(Format.temperature(sensor.value, fahrenheit: fahrenheit)).font(.system(size: 13, weight: .medium, design: .monospaced)).foregroundStyle(Palette.peach) }.padding(13).background(Palette.background.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
                     }
                 }
-                Text("Sensor names follow community M3 mappings and may vary by hardware. Averages include only sensors that respond. Cooling remains managed by macOS.").font(.system(size: 10)).foregroundStyle(Palette.muted).lineSpacing(3)
+                Text("Sensor names follow community M2/M3 mappings and may vary by hardware. Averages include only sensors that respond. Cooling remains managed by macOS.").font(.system(size: 10)).foregroundStyle(Palette.muted).lineSpacing(3)
             }
         }
     }

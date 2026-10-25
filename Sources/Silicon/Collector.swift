@@ -6,7 +6,7 @@ import SensorBridge
 final class Collector: @unchecked Sendable {
     private var previousCPU: [[UInt32]] = []
     private let connection = silicon_smc_open()
-    private var availableSensors: [(key: String, name: String, group: String)]?
+    private let temperatureDefinitions = SensorCatalog.temperatureDefinitions(chip: Collector.sysString("machdep.cpu.brand_string"))
     deinit { silicon_smc_close(connection) }
     func resetCPU() { previousCPU = [] }
 
@@ -108,32 +108,6 @@ final class Collector: @unchecked Sendable {
         return key.withCString { silicon_smc_read(connection, $0, &value) } == 1 ? value : nil
     }
     func sensors() -> [SensorSample] {
-        if availableSensors == nil {
-            var candidates: [(String, String, String)] = []
-            let chip = Collector.sysString("machdep.cpu.brand_string")
-            if chip.contains("M3") {
-                let efficiency = ["Te05", "Te0L", "Te0P", "Te0S"]
-                let performance = ["Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0D", "Tf0E", "Tf44", "Tf49", "Tf4A", "Tf4B", "Tf4D", "Tf4E"]
-                let gpu = ["Tf14", "Tf18", "Tf19", "Tf1A", "Tf24", "Tf28", "Tf29", "Tf2A"]
-                candidates += efficiency.enumerated().map { ($0.element, "Efficiency sensor \($0.offset + 1)", "CPU") }
-                candidates += performance.enumerated().map { ($0.element, "Performance sensor \($0.offset + 1)", "CPU") }
-                candidates += gpu.enumerated().map { ($0.element, "GPU sensor \($0.offset + 1)", "GPU") }
-            } else {
-                candidates += [("TC0P", "CPU proximity", "CPU"), ("TC0D", "CPU diode", "CPU"), ("TC0F", "CPU die", "CPU")]
-            }
-            candidates += [("TB0T", "Battery", "Battery"), ("TB1T", "Battery sensor 2", "Battery")]
-            availableSensors = candidates.filter { if let v = read($0.0) { return v > 0 && v < 130 }; return false }
-        }
-        var samples = (availableSensors ?? []).compactMap { sensor -> SensorSample? in
-            guard let value = read(sensor.key), value > 0, value < 130 else { return nil }
-            return SensorSample(id: sensor.key, name: sensor.name, group: sensor.group, value: value)
-        }
-        for index in 0..<4 {
-            let key = "F\(index)Ac"
-            if let rpm = read(key), rpm >= 0, rpm < 15000 {
-                samples.append(SensorSample(id: key, name: "Fan \(index + 1)", group: "Fan", value: rpm))
-            }
-        }
-        return samples
+        SensorCatalog.samples(definitions: temperatureDefinitions, read: read)
     }
 }
