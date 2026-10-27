@@ -4,7 +4,7 @@
 
 **A closer look at your Mac.**
 
-A native macOS monitor for CPU, memory, processes, temperatures, and fans.
+A native macOS monitor for CPU, memory, processes, network traffic, temperatures, and fans.
 Built with SwiftUI, graphite surfaces, and soft mint accents.
 
 [![Build](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/rmjohnson12/silicon-mac-monitor/actions/workflows/build.yml)
@@ -26,6 +26,7 @@ Built with SwiftUI, graphite surfaces, and soft mint accents.
 | **Memory** | App/wired/compressed memory, available memory, cache, swap, and kernel memory pressure |
 | **Thermals** | CPU temperature history, available hardware sensors, fan RPM, and macOS thermal pressure |
 | **Processes** | Search by name or PID, sort columns, filter CPU users, inspect a process, and reveal its executable in Finder |
+| **Network** | Live download/upload Mbps, 1/5/15-minute traffic charts, session transfer totals, connection status, and local IPv4/IPv6 addresses with copy buttons |
 | **Menu bar** | A compact stats panel and current CPU usage, available after closing the main window |
 
 Choose a 1-, 2-, or 5-second refresh interval, switch temperature readouts between Celsius and Fahrenheit, pause monitoring, or export a local JSON snapshot. Charts retain up to 15 minutes of collected samples in memory.
@@ -63,9 +64,12 @@ Unavailable sensors display **—** or an explicit unavailable message. The conf
 
 **Thermals:** Thermal pressure uses Apple's documented `ProcessInfo.thermalState`. Hardware temperatures and fans use a **read-only AppleSMC connection**. If a CPU/GPU group has no responding SMC sensors, a second read-only reader tries HID thermal services with recognized CPU/GPU product labels. A responding group keeps its SMC readings to avoid counting the same sensors through two interfaces. SOC, battery, enclosure, and unrecognized HID temperatures never substitute for CPU/GPU. Neither reader requires administrator access or a privileged helper. AppleSMC and the HID event calls are undocumented/private interfaces; availability can vary with macOS, and this build is not claimed to satisfy Mac App Store API requirements. CPU/GPU readings are averages of responding sensors, rather than a hottest-core or package-temperature claim. The temperature history chart stays explicitly labeled in Celsius when readouts are set to Fahrenheit.
 
+**Network:** Rates are deltas from the kernel's 64-bit adapter byte counters divided by monotonic elapsed time. The collector uses System Configuration to select Wi-Fi/Ethernet/cellular adapters and checks media link state; it excludes loopback, tunnel, bridge and peer-to-peer interfaces to avoid duplicate traffic accounting. Rates include local-network activity and are **not** negotiated Wi-Fi link speed, per-process traffic, or an internet speed test. Mbps and transfer MB/GB use decimal units. Session totals start at zero on launch and include only observed intervals: the first sample, paused intervals, failed reads, counter resets, newly attached adapters, and gaps longer than 15 seconds cannot add since-boot or unobserved traffic. Charts break across sampling discontinuities. `NWPathMonitor` reports a usable network route, which does not guarantee that a particular internet service is reachable. Unknown hardware link state falls back to the interface's up/running flags.
+
 ## Privacy
 
 - Collection and charts run locally. The app has no account, analytics, or network requests.
+- Network monitoring reads local adapter counters, addresses, and route state. It does not capture packet contents, look up your public IP, run speed tests, or request location access. Local IP addresses and adapter identifiers stay out of snapshots; only aggregate rates, session totals, adapter count, and generic connection/route status are exported.
 - History stays in memory and is discarded when the app quits.
 - JSON snapshots are written only when you choose to export them. They include app version, chip/model, OS version, core count, process names, PIDs, resource usage, sensor readings and their SMC/HID source, and omit executable paths, command-line arguments, and the Mac's serial number. Sensor diagnostics include attempted SMC keys, format/read status, HID thermal product labels and available values, and missing temperature groups.
 - Build output, local screenshots, exported verification data, and sharing drafts are excluded from version control. The public preview uses sample values.
@@ -76,9 +80,12 @@ Unavailable sensors display **—** or an explicit unavailable message. The conf
 swift build -c release --build-system native
 .build/release/Silicon --self-test
 .build/release/Silicon --diagnostics
+.build/release/Silicon --network-diagnostics
 ```
 
-`--self-test` runs **55 regression checks** covering process parsing, multicore CPU values, memory bounds, missing readings, temperature conversion, JSON exports, M1/M2/M3 sensor selection, model identity, fanless classification, zero-RPM handling, sensor recovery, HID label/validity filtering, per-group fallback, and diagnostic exports. Sensor-selection checks use synthetic responses and do not calibrate or validate physical sensors. The runner does not require XCTest.
+`--self-test` runs **78 regression checks** covering process parsing, multicore CPU values, memory bounds, missing readings, temperature conversion, JSON exports, M1/M2/M3 sensor selection, model identity, fanless classification, zero-RPM handling, sensor recovery, HID label/validity filtering, per-group fallback, diagnostic exports, and network counter math/privacy. Network checks include 64-bit counters, actual sample intervals, idle versus unavailable readings, counter reset, pause, long gaps, failed reads, adapter addition/removal/index reuse, loopback/tunnel exclusion, inactive media, decimal units, and an export allowlist. Sensor-selection checks use synthetic responses and do not calibrate or validate physical sensors. The runner does not require XCTest.
+
+`--network-diagnostics` passively samples local counters twice and prints only the aggregate network export fields. It makes no test connection and exits nonzero if adapter enumeration/counter reads fail. Zero traffic and no active adapters are valid states. Live Wi-Fi rates and local IPv4/IPv6 display were checked on the development M3 Max. Inactive-link and hotplug counter behavior have deterministic coverage; physically switching adapters or disconnecting the network still needs device testing.
 
 `--sensor-diagnostics` prints a sensor-only JSON report and forces a HID probe even when SMC temperatures work. This report includes no process list. Regular UI snapshot exports also include sensor diagnostics for the last completed sample.
 
@@ -88,7 +95,7 @@ swift build -c release --build-system native
 
 | Shortcut | Action |
 | --- | --- |
-| `⌘1`–`⌘5` | Change views |
+| `⌘1`–`⌘6` | Change views (Network is `⌘6`; existing shortcuts are retained) |
 | `⇧⌘P` | Pause or resume |
 | `⌘F` | Search in Processes |
 | `⇧⌘E` | Export a snapshot |
@@ -96,7 +103,7 @@ swift build -c release --build-system native
 
 ## Implementation and attribution
 
-The app uses SwiftUI and Charts for the interface, Mach APIs for CPU/memory counters, `ps` for process sampling, and a small C bridge for read-only AppleSMC access. It was developed with assistance from OpenAI Codex.
+The app uses SwiftUI and Charts for the interface, Mach APIs for CPU/memory counters, `ps` for process sampling, System Configuration/Network for adapter and route state, local kernel counters for traffic, and small C bridges for read-only hardware access. It was developed with assistance from OpenAI Codex.
 
 - [Apple: thermal state](https://developer.apple.com/documentation/foundation/processinfo/thermalstate-swift.enum)
 - [Apple: Mach memory statistics](https://developer.apple.com/documentation/kernel/1502863-host_statistics64)

@@ -130,6 +130,7 @@ enum SelfChecks {
             try expect((decoded["sensors"] as? [[String: Any]])?.first?["source"] as? String == "SMC", "Retain explicit SMC attribution for existing sensors")
             let unavailableProbe = silicon_smc_probe(0, "Tp01")
             try expect(unavailableProbe.status == 1, "Report a missing SMC connection without a fabricated temperature")
+            count += try NetworkSelfChecks.run()
             print("PASS: \(count) regression checks.")
             return 0
         } catch { fputs("FAIL: \(error)\n", stderr); return 1 }

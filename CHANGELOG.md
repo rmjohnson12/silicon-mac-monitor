@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0 — 2026-10-27
+
+- Add a Network tab (`⌘6`) with mint download and blue upload charts, Mbps readouts, 1/5/15-minute ranges, observed session totals, connection/route status, and local IPv4/IPv6 copy buttons. Inactive adapters can be expanded separately.
+- Read local 64-bit adapter counters without packet capture or external requests. Exclude tunnel/loopback/bridge duplication and check link status so an unplugged Ethernet port is not marked active just because its running flag is set.
+- Handle idle traffic, baseline startup, resets, failed reads, adapter changes, pause/resume, wake and long sampling gaps without since-boot spikes. Keep session totals through pause; break chart lines at discontinuities.
+- Export an explicit aggregate network summary, excluding IP addresses and adapter identifiers. Add a passive `--network-diagnostics` command.
+- Expand the regression suite to 78 checks, including timing, reset/hotplug cases and snapshot privacy.
+
+Live Wi-Fi rates and IPv4/IPv6 display passed on the development M3 Max. A snapshot exported through the UI contained only the approved aggregate network fields. Inactive-link and hotplug counter behavior have deterministic coverage; physically switching adapters or disconnecting the network still needs device testing. M1 temperature validation remains separate and pending; this update does not establish additional thermal compatibility.
+
 ## 1.0.3 — 2026-10-25
 
 - Add a read-only HID thermal reader for recognized CPU/GPU services when the corresponding SMC temperature group is unavailable. The M1 Air report confirmed that the 1.0.2 SMC mapping alone did not restore its temperatures.

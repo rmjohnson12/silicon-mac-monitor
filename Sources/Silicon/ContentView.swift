@@ -1,13 +1,13 @@
 import SwiftUI
 
 enum Destination: String, CaseIterable, Identifiable {
-    case overview = "Overview", cpu = "CPU", memory = "Memory", thermals = "Thermals", processes = "Processes"
+    case overview = "Overview", cpu = "CPU", memory = "Memory", thermals = "Thermals", processes = "Processes", network = "Network"
     var id: String { rawValue }
     var icon: String {
-        switch self { case .overview: return "square.grid.2x2"; case .cpu: return "cpu"; case .memory: return "memorychip"; case .thermals: return "thermometer.medium"; case .processes: return "list.bullet.rectangle" }
+        switch self { case .overview: return "square.grid.2x2"; case .cpu: return "cpu"; case .memory: return "memorychip"; case .thermals: return "thermometer.medium"; case .processes: return "list.bullet.rectangle"; case .network: return "network" }
     }
     var subtitle: String {
-        switch self { case .overview: return "The bigger picture"; case .cpu: return "Every core, in focus"; case .memory: return "Room to do more"; case .thermals: return "Keep your cool"; case .processes: return "See what’s running" }
+        switch self { case .overview: return "The bigger picture"; case .cpu: return "Every core, in focus"; case .memory: return "Room to do more"; case .thermals: return "Keep your cool"; case .processes: return "See what’s running"; case .network: return "A little more connected." }
     }
 }
 
@@ -36,6 +36,7 @@ struct ContentView: View {
                             case .cpu: CPUDetailView(store: store, range: $range)
                             case .memory: MemoryDetailView(store: store, range: $range)
                             case .thermals: ThermalDetailView(store: store, range: $range)
+                            case .network: NetworkView(store: store, range: $range)
                             case .processes: EmptyView()
                             }
                             footer
@@ -129,6 +130,7 @@ struct ContentView: View {
         case .cpu: return "\(store.machine.cores) cores. One powerful piece of silicon."
         case .memory: return "\(Format.memory(store.machine.memory)) of unified memory, shared across your Mac."
         case .thermals: return "Live hardware sensors and thermal pressure, side by side."
+        case .network: return "Live transfers, session totals, and the connections behind them."
         default: return ""
         }
     }
